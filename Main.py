@@ -18,8 +18,7 @@ templates = Jinja2Templates(directory="templates")
 
 SESSIONS_FILE = "sessions.json"
 TIME_LIMIT_MINUTES = 10
-TELEGRAM_BOT_TOKEN = "7663834172:AAEUM4LZwizpmjKqgVUztruCrZtgNtGD7KU"
-CHAT_ID = 1779422624
+
 
 # Завантажуємо збережені сесії
 if os.path.exists(SESSIONS_FILE):
