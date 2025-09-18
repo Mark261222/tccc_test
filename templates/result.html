@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Результат тесту</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 400px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        p {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+        .score {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2E8B57;
+            margin: 20px 0;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #007BFF;
+            border-radius: 8px;
+            text-decoration: none;
+            margin-top: 20px;
+            transition: background-color 0.3s ease;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .telegram-info {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Тест завершено!</h1>
+        <p>Користувач: <strong>{{ name }}</strong></p>
+        <p class="score">Ваш результат: {{ score }} / {{ total }}</p>
+        <p>Результат автоматично надіслано у Telegram.</p>
+        <a href="/" class="btn">Повернутися на головну</a>
+        <div class="telegram-info">
+            Якщо не отримали повідомлення у Telegram, перевірте, чи бот доданий та CHAT_ID вказаний правильно.
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+    "completed_sessions": {
+        "сві": {
+            "session_id": "06fda55f-46fc-4c6e-8df2-154fa004480e",
+            "score": 0
+        },
+        "м авм": {
+            "session_id": "6e7c6ead-b2fe-4228-9462-5a74b120a66b",
+            "score": 0
+        },
+        "мпсч": {
+            "session_id": "0b701eb2-25af-4809-89c8-076138b95fd7",
+            "score": 5
+        },
+        "аммпсп": {
+            "session_id": "a55f7d60-6aab-42b2-be14-df9184f89186",
+            "score": 15
+        },
+        "vgcf": {
+            "session_id": "cc7112f7-2348-4a32-bfa9-1e7f0591753f",
+            "score": 0
+        }
+    }
+}

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>TCCC/MARCH Тест</title>
+</head>
+<body>
+    <h2>Тест з тактичної медицини TCCC/MARCH</h2>
+    <p>Тест складається з 20 питань. На проходження тесту дається 15 хвилин.</p>
+    <form action="/start" method="post">
+        <label>ПІБ:</label><br>
+        <input type="text" name="pib" required minlength="3" pattern="[A-Za-zА-Яа-яЁёЇїІіЄє\s]+" title="Тільки літери, мінімум 3 символи"><br><br>
+        <button type="submit">Почати тест</button>
+    </form>
+    {% if error %}
+    <p style="color:red;">{{ error }}</p>
+    {% endif %}
+</body>
+</html>

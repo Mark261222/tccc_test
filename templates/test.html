@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Тест TCCC/MARCH</title>
+<style>
+body { font-family: Arial, sans-serif; margin: 40px; }
+.question { margin-bottom: 20px; }
+.answers { margin-bottom: 20px; }
+.nav-buttons { text-align: center; margin-top: 20px; }
+.question-nav { text-align: center; margin-top: 20px; }
+.question-nav button { margin: 2px; padding:5px 10px; }
+.timer { font-size: 18px; font-weight: bold; margin-bottom: 20px; }
+.green { background-color: #28a745; color: white; }
+.gray { background-color: #ccc; color: black; }
+.blink { animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+</style>
+<script>
+let sessionId = "{{ session_id }}";
+
+// Отримуємо залишок часу з localStorage або серверу
+let storedTime = localStorage.getItem('timeLeft_' + sessionId);
+let timeLeft = storedTime !== null ? parseInt(storedTime) : {{ time_left }};
+
+function startTimer() {
+    const timerEl = document.getElementById("timer");
+    const hiddenTime = document.getElementById("hidden_time");
+
+    const interval = setInterval(() => {
+        let minutes = Math.floor(timeLeft / 60);
+        let seconds = timeLeft % 60;
+
+        if (timeLeft > 5*60) {
+            timerEl.style.color = "green";
+            timerEl.classList.remove("blink");
+        } else if (timeLeft <= 5*60 && timeLeft > 3*60) {
+            timerEl.style.color = "orange";
+            timerEl.classList.remove("blink");
+        } else if (timeLeft <= 3*60 && timeLeft > 1*60) {
+            timerEl.style.color = "red";
+            timerEl.classList.remove("blink");
+        } else if (timeLeft <= 60) {
+            timerEl.style.color = "red";
+            timerEl.classList.add("blink");
+        }
+
+        timerEl.textContent = `Залишилось часу: ${minutes}:${seconds.toString().padStart(2,'0')}`;
+        hiddenTime.value = timeLeft;
+
+        // Зберігаємо час у localStorage
+        localStorage.setItem('timeLeft_' + sessionId, timeLeft);
+
+        if (timeLeft <= 0) {
+            clearInterval(interval);
+            document.getElementById("answerForm").direction.value = "finish";
+            document.getElementById("answerForm").submit();
+        }
+
+        timeLeft--;
+    }, 1000);
+}
+
+// Підсвічування кнопок навігації
+function updateNavButtons() {
+    {% for i in range(total_questions) %}
+        let btn{{ i }} = document.getElementById("btn{{ i }}");
+        {% if answers[i] is not none %}
+            btn{{ i }}.classList.add("green");
+            btn{{ i }}.classList.remove("gray");
+        {% else %}
+            btn{{ i }}.classList.add("gray");
+            btn{{ i }}.classList.remove("green");
+        {% endif %}
+    {% endfor %}
+}
+
+// Збереження вибраної відповіді
+function setupAnswerSave() {
+    const radios = document.querySelectorAll('input[name="answer_index_radio"]');
+    radios.forEach(r => {
+        r.addEventListener('change', () => {
+            document.getElementById("hidden_answer").value = r.value;
+
+            // Оновлюємо hidden поля у кнопках-перехід
+            {% for i in range(total_questions) %}
+                document.getElementById("hidden_jump_answer_{{ i }}").value = r.value;
+            {% endfor %}
+
+            updateNavButtons();
+        });
+    });
+}
+
+window.onload = function() {
+    startTimer();
+    setupAnswerSave();
+    updateNavButtons();
+}
+</script>
+</head>
+<body>
+<h2>Тест з тактичної медицини TCCC/MARCH</h2>
+<p>Користувач: <strong>{{ name }}</strong></p>
+<p>Питання {{ question_index + 1 }} / {{ total_questions }}</p>
+<div class="timer" id="timer"></div>
+
+<form id="answerForm" method="post" action="/answer/{{ session_id }}">
+    <div class="question">
+        <strong>{{ question.question }}</strong>
+    </div>
+    <div class="answers">
+        {% for a in question.answers %}
+        <label>
+            <input type="radio" name="answer_index_radio" value="{{ loop.index0 }}"
+            {% if answer_selected == loop.index0 %}checked{% endif %}>
+            {{ a }}
+        </label><br>
+        {% endfor %}
+    </div>
+
+    <!-- приховані поля -->
+    <input type="hidden" id="hidden_answer" name="answer_index" value="{{ answer_selected if answer_selected is not none else '' }}">
+    <input type="hidden" name="direction" value="next">
+    <input type="hidden" id="hidden_time" name="time_left" value="{{ time_left }}">
+
+    <div class="nav-buttons">
+        {% if question_index > 0 %}
+        <button type="submit" onclick="this.form.direction.value='prev'">Назад</button>
+        {% endif %}
+        {% if question_index < total_questions - 1 %}
+        <button type="submit" onclick="this.form.direction.value='next'">Вперед</button>
+        {% else %}
+        <button type="submit" onclick="this.form.direction.value='finish'; localStorage.removeItem('timeLeft_' + sessionId)">Завершити тест</button>
+        {% endif %}
+    </div>
+</form>
+
+<div class="question-nav">
+  {% for i in range(total_questions) %}
+    <form method="post" action="/answer/{{ session_id }}" style="display:inline;">
+      <input type="hidden" name="direction" value="jump">
+      <input type="hidden" name="jump_index" value="{{ i }}">
+      <input type="hidden" name="time_left" value="{{ time_left }}">
+      <input type="hidden" id="hidden_jump_answer_{{ i }}" name="answer_index" value="{{ answers[i] if answers[i] is not none else '' }}">
+      <button type="submit" id="btn{{ i }}"
+        {% if answers[i] is not none %}
+          class="green"
+        {% else %}
+          class="gray"
+        {% endif %}>
+        {{ i+1 }}
+      </button>
+    </form>
+  {% endfor %}
+</div>
+
+</body>
+</html>
