@@ -1,103 +1,40 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-  <meta charset="UTF-8">
-  <title>Тест з тактичної медицини</title>
-  <style>
-    body { font-family: Arial; margin: 40px; }
-    label { display: block; margin: 10px 0 5px; }
-    button { padding: 6px 14px; margin-top: 10px; cursor: pointer; }
-    button:disabled { background: #ccc; cursor: not-allowed; }
-    .error { color: red; margin-top: 5px; }
-    #timer { font-weight: bold; font-size: 1.3em; margin-top: 15px; }
-    #questions { margin-top: 20px; display: none; }
-  </style>
+    <meta charset="UTF-8">
+    <title>Тест з тактичної медицини</title>
+    <style>
+        body { font-family: Arial; margin: 40px; }
+        .error { color: red; }
+        button:disabled { background-color: #ccc; }
+    </style>
+    <script>
+        function validatePIB() {
+            const pibInput = document.getElementById("pib");
+            const startBtn = document.getElementById("startBtn");
+            const errorEl = document.getElementById("error");
+
+            const value = pibInput.value.trim();
+            const regex = /^[^\d]{3,}$/; // мінімум 3 символи, без цифр
+
+            if(regex.test(value)) {
+                startBtn.disabled = false;
+                errorEl.innerText = "";
+            } else {
+                startBtn.disabled = true;
+                errorEl.innerText = "ПІБ повинно містити мінімум 3 символи і не містити цифр.";
+            }
+        }
+    </script>
 </head>
 <body>
-  <h1>Тест з тактичної медицини TCCC/MARCH</h1>
-  <p>Тест містить 20 запитань. Час на виконання – 10 хвилин.</p>
+    <h1>Тест з тактичної медицини TCCC/MARCH</h1>
+    <p>Цей тест складається з 20 питань і займе приблизно 15 хвилин. Після заповнення ПІБ можна буде почати тест.</p>
 
-  <form id="form">
-    <label>Ваше ПІБ:</label>
-    <input id="pib" type="text" required minlength="3"
-      pattern="[A-Za-zА-Яа-яЁёЇїІіЄєҐґ\s]+" oninput="validatePIB()">
-    <div id="error" class="error"></div>
-    <button id="startBtn" type="submit" disabled>Почати тест</button>
-  </form>
-
-  <button id="finishBtn" style="display:none;">Завершити тест</button>
-
-  <div id="timer" style="display:none"></div>
-  <div id="questions"></div>
-
-  <script>
-    let intervalId = null;
-    let fullName = null;
-
-    function validatePIB() {
-      const pibInput = document.getElementById("pib");
-      const startBtn = document.getElementById("startBtn");
-      const errorEl = document.getElementById("error");
-      const value = pibInput.value.trim();
-      const regex = /^[^\d]{3,}$/;
-
-      if(regex.test(value)) {
-        startBtn.disabled = false;
-        errorEl.innerText = "";
-      } else {
-        startBtn.disabled = true;
-        errorEl.innerText = "ПІБ повинно містити мінімум 3 символи та не містити цифр.";
-      }
-    }
-
-    document.getElementById("form").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      fullName = document.getElementById("pib").value.trim();
-
-      // старт тесту на сервері
-      await fetch("/api/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ full_name: fullName })
-      });
-
-      // ховаємо форму та показуємо таймер і питання
-      document.getElementById("form").style.display = "none";
-      document.getElementById("timer").style.display = "block";
-      document.getElementById("finishBtn").style.display = "inline-block";
-
-      // отримуємо питання
-      const res = await fetch("/api/questions");
-      const data = await res.json();
-      document.getElementById("questions").innerHTML = data.html;
-      document.getElementById("questions").style.display = "block";
-
-      updateTimer();
-      intervalId = setInterval(updateTimer, 1000);
-    });
-
-    document.getElementById("finishBtn").addEventListener("click", () => {
-      clearInterval(intervalId);
-      document.getElementById("timer").innerText = '';
-      document.getElementById("questions").style.display = "none";
-      document.getElementById("finishBtn").style.display = "none";
-      document.getElementById("form").style.display = "block";
-      alert("Тест завершено!");
-    });
-
-    async function updateTimer() {
-      const res = await fetch(`/api/time_left?full_name=${encodeURIComponent(fullName)}`);
-      const data = await res.json();
-      if(data.time_left <= 0) {
-        clearInterval(intervalId);
-        alert("Час вичерпано! Тест завершено.");
-        document.getElementById("finishBtn").click();
-      } else {
-        const min = Math.floor(data.time_left/60);
-        const sec = data.time_left%60;
-        document.getElementById("timer").innerText = `Залишок часу: ${min}:${sec.toString().padStart(2,'0')}`;
-      }
-    }
-  </script>
+    <form method="post" action="/start">
+  <label>Ваше ПІБ:</label>
+  <input type="text" name="full_name" required minlength="3" pattern="[A-Za-zА-Яа-яЁёЇїІіЄєҐґ\s]+">
+  <button type="submit">Почати тест</button>
+</form>
 </body>
 </html>
