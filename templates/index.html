@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="uk">
 <head>
   <meta charset="UTF-8">
@@ -10,13 +10,12 @@
     button { padding: 6px 14px; margin-top: 10px; cursor: pointer; }
     button:disabled { background: #ccc; cursor: not-allowed; }
     .error { color: red; margin-top: 5px; }
-    #status { margin-top: 15px; font-weight: bold; }
     #timer { font-size: 1.4em; font-weight: bold; margin-top: 15px; }
   </style>
 </head>
 <body>
   <h1>Тест з тактичної медицини TCCC/MARCH</h1>
-  <p>Тест містить 20 запитань. Час на виконання – <b>10 хвилин</b>. Одночасно тест може проходити лише одна особа.</p>
+  <p>Тест містить 20 запитань. Час на виконання – <b>10 хвилин</b>.</p>
 
   <label for="pib">Ваше ПІБ:</label>
   <input type="text" id="pib" placeholder="Введіть ПІБ" oninput="validatePIB()">
@@ -24,26 +23,13 @@
   <button id="startBtn" disabled>Почати тест</button>
   <button id="finishBtn" style="display:none;">Завершити тест</button>
 
-  <div id="status"></div>
   <div id="timer"></div>
 
   <script>
-    const totalTime = 10 * 60 * 1000; // 10 хв у мс
+    const totalTime = 10 * 60 * 1000; // 10 хвилин у мс
     let startTime = null;
     let intervalId = null;
     let fullName = null;
-
-    async function checkStatus() {
-      const res = await fetch('/status');
-      const data = await res.json();
-      if (data.active) {
-        const remainingMin = Math.ceil(data.remaining / 60000);
-        document.getElementById('status').innerText =
-          `Зараз тест проходить ${data.fullName}. Залишилось приблизно ${remainingMin} хвилин.`;
-      } else {
-        document.getElementById('status').innerText = 'Тест вільний.';
-      }
-    }
 
     function validatePIB() {
       const pibInput = document.getElementById("pib");
@@ -61,40 +47,30 @@
       }
     }
 
-    document.getElementById('startBtn').addEventListener('click', async () => {
+    document.getElementById('startBtn').addEventListener('click', () => {
       fullName = document.getElementById('pib').value.trim();
-      const res = await fetch('/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName })
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        alert(data.error || 'Помилка старту тесту.');
-        checkStatus();
-        return;
+      // Зберігаємо час початку у localStorage для конкретного ПІБ
+      const saved = JSON.parse(localStorage.getItem(`tccc_${fullName}`));
+      if (saved && saved.startTime) {
+        startTime = saved.startTime;
+      } else {
+        startTime = Date.now();
+        localStorage.setItem(`tccc_${fullName}`, JSON.stringify({ startTime }));
       }
-      const data = await res.json();
-      startTime = data.startTime;
+
       document.getElementById('startBtn').style.display = 'none';
       document.getElementById('finishBtn').style.display = 'inline-block';
-      intervalId = setInterval(updateTimer, 1000);
       updateTimer();
+      intervalId = setInterval(updateTimer, 1000);
     });
 
-    document.getElementById('finishBtn').addEventListener('click', async () => {
-      if (!fullName) return;
-      await fetch('/finish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName })
-      });
+    document.getElementById('finishBtn').addEventListener('click', () => {
       clearInterval(intervalId);
+      localStorage.removeItem(`tccc_${fullName}`);
       document.getElementById('timer').innerText = '';
       document.getElementById('finishBtn').style.display = 'none';
       document.getElementById('startBtn').style.display = 'inline-block';
-      document.getElementById('status').innerText = 'Тест завершено. Тепер може зайти інший користувач.';
-      checkStatus();
+      alert("Тест завершено!");
     });
 
     function updateTimer() {
@@ -109,10 +85,9 @@
         document.getElementById('finishBtn').click();
       }
     }
-
-    // Автооновлення статусу кожні 10 секунд
-    checkStatus();
-    setInterval(checkStatus, 10000);
+  </script>
+</body>
+</html>
   </script>
 </body>
 </html>
