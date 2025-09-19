@@ -1,30 +1,49 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="uk">
 <head>
   <meta charset="UTF-8">
   <title>Тест з тактичної медицини</title>
   <style>
-    body { font-family: Arial; margin: 40px; }
-    .error { color: red; }
-    #timer { font-weight: bold; font-size: 1.2em; margin-top: 10px; }
-    button:disabled { background-color: #ccc; }
+    body { font-family: Arial, sans-serif; margin: 40px; }
+    h1 { margin-bottom: 10px; }
+    label { display: block; margin: 10px 0 5px; }
+    button { padding: 6px 14px; margin-top: 10px; cursor: pointer; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .error { color: red; margin-top: 5px; }
+    #status { margin-top: 15px; font-weight: bold; }
+    #timer { font-size: 1.4em; font-weight: bold; margin-top: 15px; }
   </style>
 </head>
 <body>
   <h1>Тест з тактичної медицини TCCC/MARCH</h1>
-  <p>Тест містить 20 питань. На виконання виділено <b>10 хвилин</b>.</p>
+  <p>Тест містить 20 запитань. Час на виконання – <b>10 хвилин</b>. Одночасно тест може проходити лише одна особа.</p>
 
-  <label>Ваше ПІБ:</label>
+  <label for="pib">Ваше ПІБ:</label>
   <input type="text" id="pib" placeholder="Введіть ПІБ" oninput="validatePIB()">
-  <button id="startBtn" disabled>Почати тест</button>
   <div id="error" class="error"></div>
+  <button id="startBtn" disabled>Почати тест</button>
+  <button id="finishBtn" style="display:none;">Завершити тест</button>
+
+  <div id="status"></div>
   <div id="timer"></div>
 
   <script>
     const totalTime = 10 * 60 * 1000; // 10 хв у мс
     let startTime = null;
-    let fullName = null;
     let intervalId = null;
+    let fullName = null;
+
+    async function checkStatus() {
+      const res = await fetch('/status');
+      const data = await res.json();
+      if (data.active) {
+        const remainingMin = Math.ceil(data.remaining / 60000);
+        document.getElementById('status').innerText =
+          `Зараз тест проходить ${data.fullName}. Залишилось приблизно ${remainingMin} хвилин.`;
+      } else {
+        document.getElementById('status').innerText = 'Тест вільний.';
+      }
+    }
 
     function validatePIB() {
       const pibInput = document.getElementById("pib");
@@ -33,45 +52,67 @@
       const value = pibInput.value.trim();
       const regex = /^[^\d]{3,}$/; // мінімум 3 символи, без цифр
 
-      if(regex.test(value)) {
+      if (regex.test(value)) {
         startBtn.disabled = false;
         errorEl.innerText = "";
       } else {
         startBtn.disabled = true;
-        errorEl.innerText = "ПІБ повинно містити мінімум 3 символи і не містити цифр.";
+        errorEl.innerText = "ПІБ повинно містити мінімум 3 символи та не містити цифр.";
       }
     }
 
-    document.getElementById('startBtn').addEventListener('click', () => {
+    document.getElementById('startBtn').addEventListener('click', async () => {
       fullName = document.getElementById('pib').value.trim();
-      const saved = JSON.parse(localStorage.getItem(`tccc_${fullName}`));
-      if (saved && saved.startTime) {
-        startTime = saved.startTime; // продовжуємо старий таймер
-      } else {
-        startTime = Date.now();
-        localStorage.setItem(`tccc_${fullName}`, JSON.stringify({ startTime }));
+      const res = await fetch('/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || 'Помилка старту тесту.');
+        checkStatus();
+        return;
       }
-      if (!intervalId) {
-        updateTimer();
-        intervalId = setInterval(updateTimer, 1000);
-      }
+      const data = await res.json();
+      startTime = data.startTime;
+      document.getElementById('startBtn').style.display = 'none';
+      document.getElementById('finishBtn').style.display = 'inline-block';
+      intervalId = setInterval(updateTimer, 1000);
+      updateTimer();
+    });
+
+    document.getElementById('finishBtn').addEventListener('click', async () => {
+      if (!fullName) return;
+      await fetch('/finish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName })
+      });
+      clearInterval(intervalId);
+      document.getElementById('timer').innerText = '';
+      document.getElementById('finishBtn').style.display = 'none';
+      document.getElementById('startBtn').style.display = 'inline-block';
+      document.getElementById('status').innerText = 'Тест завершено. Тепер може зайти інший користувач.';
+      checkStatus();
     });
 
     function updateTimer() {
-      const now = Date.now();
-      const remaining = Math.max(totalTime - (now - startTime), 0);
+      const remaining = Math.max(totalTime - (Date.now() - startTime), 0);
       const minutes = Math.floor(remaining / 60000);
       const seconds = Math.floor((remaining % 60000) / 1000);
-
       document.getElementById('timer').innerText =
         `Залишок часу: ${minutes}:${seconds.toString().padStart(2,'0')}`;
-
       if (remaining <= 0) {
         clearInterval(intervalId);
-        alert("Час вичерпано! Ваш тест завершено.");
-        // тут можна виконати автоматичне відправлення відповідей або редирект
+        alert('Час вичерпано! Тест завершено.');
+        document.getElementById('finishBtn').click();
       }
     }
+
+    // Автооновлення статусу кожні 10 секунд
+    checkStatus();
+    setInterval(checkStatus, 10000);
   </script>
 </body>
 </html>
