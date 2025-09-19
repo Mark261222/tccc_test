@@ -1,40 +1,77 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-    <meta charset="UTF-8">
-    <title>Тест з тактичної медицини</title>
-    <style>
-        body { font-family: Arial; margin: 40px; }
-        .error { color: red; }
-        button:disabled { background-color: #ccc; }
-    </style>
-    <script>
-        function validatePIB() {
-            const pibInput = document.getElementById("pib");
-            const startBtn = document.getElementById("startBtn");
-            const errorEl = document.getElementById("error");
-
-            const value = pibInput.value.trim();
-            const regex = /^[^\d]{3,}$/; // мінімум 3 символи, без цифр
-
-            if(regex.test(value)) {
-                startBtn.disabled = false;
-                errorEl.innerText = "";
-            } else {
-                startBtn.disabled = true;
-                errorEl.innerText = "ПІБ повинно містити мінімум 3 символи і не містити цифр.";
-            }
-        }
-    </script>
+  <meta charset="UTF-8">
+  <title>Тест з тактичної медицини</title>
+  <style>
+    body { font-family: Arial; margin: 40px; }
+    .error { color: red; }
+    #timer { font-weight: bold; font-size: 1.2em; margin-top: 10px; }
+    button:disabled { background-color: #ccc; }
+  </style>
 </head>
 <body>
-    <h1>Тест з тактичної медицини TCCC/MARCH</h1>
-    <p>Цей тест складається з 20 питань і займе приблизно 15 хвилин. Після заповнення ПІБ можна буде почати тест.</p>
+  <h1>Тест з тактичної медицини TCCC/MARCH</h1>
+  <p>Тест містить 20 питань. На виконання виділено <b>10 хвилин</b>.</p>
 
-    <form method="post" action="/start">
   <label>Ваше ПІБ:</label>
-  <input type="text" name="full_name" required minlength="3" pattern="[A-Za-zА-Яа-яЁёЇїІіЄєҐґ\s]+">
-  <button type="submit">Почати тест</button>
-</form>
+  <input type="text" id="pib" placeholder="Введіть ПІБ" oninput="validatePIB()">
+  <button id="startBtn" disabled>Почати тест</button>
+  <div id="error" class="error"></div>
+  <div id="timer"></div>
+
+  <script>
+    const totalTime = 10 * 60 * 1000; // 10 хв у мс
+    let startTime = null;
+    let fullName = null;
+    let intervalId = null;
+
+    function validatePIB() {
+      const pibInput = document.getElementById("pib");
+      const startBtn = document.getElementById("startBtn");
+      const errorEl = document.getElementById("error");
+      const value = pibInput.value.trim();
+      const regex = /^[^\d]{3,}$/; // мінімум 3 символи, без цифр
+
+      if(regex.test(value)) {
+        startBtn.disabled = false;
+        errorEl.innerText = "";
+      } else {
+        startBtn.disabled = true;
+        errorEl.innerText = "ПІБ повинно містити мінімум 3 символи і не містити цифр.";
+      }
+    }
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+      fullName = document.getElementById('pib').value.trim();
+      const saved = JSON.parse(localStorage.getItem(`tccc_${fullName}`));
+      if (saved && saved.startTime) {
+        startTime = saved.startTime; // продовжуємо старий таймер
+      } else {
+        startTime = Date.now();
+        localStorage.setItem(`tccc_${fullName}`, JSON.stringify({ startTime }));
+      }
+      if (!intervalId) {
+        updateTimer();
+        intervalId = setInterval(updateTimer, 1000);
+      }
+    });
+
+    function updateTimer() {
+      const now = Date.now();
+      const remaining = Math.max(totalTime - (now - startTime), 0);
+      const minutes = Math.floor(remaining / 60000);
+      const seconds = Math.floor((remaining % 60000) / 1000);
+
+      document.getElementById('timer').innerText =
+        `Залишок часу: ${minutes}:${seconds.toString().padStart(2,'0')}`;
+
+      if (remaining <= 0) {
+        clearInterval(intervalId);
+        alert("Час вичерпано! Ваш тест завершено.");
+        // тут можна виконати автоматичне відправлення відповідей або редирект
+      }
+    }
+  </script>
 </body>
 </html>
