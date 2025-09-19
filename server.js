@@ -1,63 +1,32 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const app = express();
-const PORT = process.env.PORT || 3000;
+from flask import Flask, request, jsonify, render_template
+import time
 
-app.use(bodyParser.json());
-app.use(express.static('public')); // тут ваша папка з index.html
+app = Flask(__name__)
 
-// Глобальна змінна для блокування
-let currentTest = null; // { fullName, startTime }
+# Хранилище: { "ПІБ": час_початку }
+sessions = {}
+TEST_DURATION = 10 * 60  # 10 хв у секундах
 
-// Перевірка стану тесту
-app.get('/status', (req, res) => {
-  if (currentTest) {
-    const elapsed = Date.now() - currentTest.startTime;
-    const remaining = 10 * 60 * 1000 - elapsed;
-    if (remaining > 0) {
-      return res.json({
-        active: true,
-        fullName: currentTest.fullName,
-        remaining
-      });
-    } else {
-      // Час минув — знімаємо блокування
-      currentTest = null;
-    }
-  }
-  res.json({ active: false });
-});
+@app.route("/")
+def index():
+    return app.send_static_file("index.html")  # index.html лежить у static/
 
-// Початок тесту
-app.post('/start', (req, res) => {
-  const { fullName } = req.body;
-  if (!fullName) return res.status(400).json({ error: 'Потрібне ПІБ' });
+@app.route("/api/start", methods=["POST"])
+def start():
+    data = request.get_json()
+    full_name = data.get("full_name")
+    sessions[full_name] = time.time()
+    return jsonify({"status":"ok"})
 
-  if (currentTest) {
-    const elapsed = Date.now() - currentTest.startTime;
-    const remaining = 10 * 60 * 1000 - elapsed;
-    if (remaining > 0) {
-      return res.status(403).json({
-        error: `Зараз тест проходить ${currentTest.fullName}`,
-        remaining
-      });
-    } else {
-      currentTest = null;
-    }
-  }
+@app.route("/api/time_left")
+def time_left():
+    full_name = request.args.get("full_name")
+    start_time = sessions.get(full_name)
+    if not start_time:
+        return jsonify({"time_left":0})
+    elapsed = time.time() - start_time
+    remaining = max(TEST_DURATION - int(elapsed), 0)
+    return jsonify({"time_left": remaining})
 
-  currentTest = { fullName, startTime: Date.now() };
-  res.json({ message: 'Тест розпочато', startTime: currentTest.startTime });
-});
-
-// Завершення тесту
-app.post('/finish', (req, res) => {
-  const { fullName } = req.body;
-  if (currentTest && currentTest.fullName === fullName) {
-    currentTest = null;
-    return res.json({ message: 'Тест завершено' });
-  }
-  res.json({ message: 'Не було активного тесту або інша особа' });
-});
-
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
